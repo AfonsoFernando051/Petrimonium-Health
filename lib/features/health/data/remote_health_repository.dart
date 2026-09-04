@@ -5,6 +5,7 @@ import '../../../core/money/money.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/profile/health_profile.dart';
 import '../domain/health_models.dart';
+import '../domain/mentor_models.dart';
 import 'health_repository.dart';
 
 final class RemoteHealthRepository implements HealthRepository {
@@ -96,6 +97,25 @@ final class RemoteHealthRepository implements HealthRepository {
     if (response.statusCode == 404) return null;
     if (response.statusCode != 200) throwApiError(response);
     return PetIdentity.fromJson(decodeObject(response));
+  }
+
+  @override
+  Future<AccountIdentity?> getCurrentUser() async {
+    final response = await _api.get('/api/users/me');
+    if (response.statusCode == 401 || response.statusCode == 404) return null;
+    if (response.statusCode != 200) throwApiError(response);
+    return AccountIdentity.fromJson(decodeObject(response));
+  }
+
+  @override
+  Future<void> configurePet({required String specie, required String name}) async {
+    final response = await _api.post('/api/pets/configure', {
+      'specie': specie,
+      'name': name,
+    });
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throwApiError(response);
+    }
   }
 
   @override
@@ -293,6 +313,23 @@ final class RemoteHealthRepository implements HealthRepository {
   }
 
   @override
+  Future<List<HealthRecurrence>> getRecurrences() async {
+    final response = await _api.get('${ApiConfig.healthBase}/recurrences');
+    if (response.statusCode != 200) throwApiError(response);
+    return decodeList(response)
+        .map(HealthRecurrence.fromJson)
+        .toList(growable: false);
+  }
+
+  @override
+  Future<void> deleteRecurrence(int id) async {
+    final response = await _api.delete('${ApiConfig.healthBase}/recurrences/$id');
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throwApiError(response);
+    }
+  }
+
+  @override
   Future<List<HealthCard>> getCards() async {
     final response = await _api.get('${ApiConfig.healthBase}/cards');
     if (response.statusCode != 200) throwApiError(response);
@@ -390,4 +427,37 @@ final class RemoteHealthRepository implements HealthRepository {
       throwApiError(response);
     }
   }
+
+  @override
+  Future<List<String>> getMentorSuggestions({
+    String language = 'pt',
+    int limit = 5,
+  }) async {
+    final uri = Uri(
+      path: '/api/mentor/suggestions',
+      queryParameters: {'language': language, 'limit': '$limit'},
+    );
+    final response = await _api.get(uri.toString());
+    if (response.statusCode != 200) throwApiError(response);
+    final json = decodeObject(response);
+    return ((json['suggestions'] as List?) ?? const [])
+        .map((item) => item.toString())
+        .toList(growable: false);
+  }
+
+  @override
+  Future<MentorReply> sendMentorMessage({
+    required String message,
+    int? conversationId,
+  }) async =>
+      MentorReply.fromJson(await _object(
+        () => _api.post('/api/mentor/chat', {
+          'message': message,
+          if (conversationId != null) 'conversationId': conversationId,
+          'context': {
+            'currentScreen': 'health_home',
+            'language': 'pt',
+          },
+        }),
+      ));
 }

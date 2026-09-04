@@ -297,6 +297,60 @@ final class MonthlySummary {
   final List<UpcomingCommitment> upcoming;
 }
 
+final class HealthRecurrence {
+  const HealthRecurrence({
+    required this.id,
+    required this.accountId,
+    required this.type,
+    required this.amount,
+    required this.description,
+    required this.category,
+    required this.dayOfMonth,
+    required this.startDate,
+    this.endDate,
+  });
+
+  factory HealthRecurrence.fromJson(Map<String, dynamic> json) {
+    final currency = CurrencyCode.parse(json['currency'] as String);
+    return HealthRecurrence(
+      id: _id(json['id']),
+      accountId: _id(json['accountId']),
+      type: TransactionType.parse(json['type'] as String),
+      amount: Money.fromDecimal(json['amount'] as String, currency),
+      description: json['description'] as String? ?? '',
+      category: json['category'] as String? ?? '',
+      dayOfMonth: (json['dayOfMonth'] as num).toInt(),
+      startDate: _date(json['startDate']),
+      endDate: json['endDate'] == null ? null : _date(json['endDate']),
+    );
+  }
+
+  final int id;
+  final int accountId;
+  final TransactionType type;
+  final Money amount;
+  final String description;
+  final String category;
+  final int dayOfMonth;
+  final DateTime startDate;
+  final DateTime? endDate;
+}
+
+/// `GET /api/users/me` — shared identity endpoint (Academy/Wallet/Health all
+/// read the same account). Used only for display (greeting, profile
+/// header); it is not part of the Health domain itself.
+final class AccountIdentity {
+  const AccountIdentity({required this.username, required this.email});
+
+  factory AccountIdentity.fromJson(Map<String, dynamic> json) => AccountIdentity(
+        username: json['username'] as String? ?? '',
+        email: json['email'] as String? ?? '',
+      );
+
+  final String username;
+  final String email;
+}
+
 final class PetIdentity {
   const PetIdentity({this.name, this.species});
 

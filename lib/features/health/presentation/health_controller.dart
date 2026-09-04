@@ -2,12 +2,28 @@ import 'package:flutter/foundation.dart';
 
 import '../../../core/i18n/locale_controller.dart';
 import '../../../core/money/money.dart';
-import '../../../core/network/api_client.dart';
 import '../../../core/profile/health_profile.dart';
 import '../data/health_repository.dart';
+import '../domain/category_catalog.dart';
 import '../domain/health_models.dart';
+import '../domain/mentor_models.dart';
+import '../domain/pet_species.dart';
 
 enum AppStage { loading, signedOut, onboarding, home }
+
+/// Which onboarding screen to show. There is no Pet yet on a brand-new
+/// account; an account that already has a Pet from Academy/Wallet skips
+/// straight to `quickSetup` (country/currency/locale) — see
+/// `Petrimonium Health.dc.html`'s `screenIsPetSetup`/`screenIsQuickSetup`.
+enum OnboardingStep { petSetup, quickSetup }
+
+enum AuthMode { login, signup }
+
+/// Screen stacked above the main tab scaffold (back-navigable), mirroring
+/// the prototype's `subScreen`.
+enum AppSubScreen { root, profile, addDebt, addIncome }
+
+enum AppTab { home, mentor }
 
 final class CurrencyLockedException implements Exception {
   const CurrencyLockedException();
@@ -24,18 +40,45 @@ final class HealthController extends ChangeNotifier {
   final LocaleController _localeController;
 
   AppStage stage = AppStage.loading;
+  AccountIdentity? account;
   HealthProfile? profile;
   PetIdentity? pet;
   MonthlySummary? summary;
   List<HealthAccount> accounts = const [];
   List<HealthTransaction> transactions = const [];
+  List<HealthTransaction> plannedTransactions = const [];
+  List<HealthRecurrence> recurrences = const [];
   List<HealthCard> cards = const [];
   DateTime selectedMonth = DateTime(DateTime.now().year, DateTime.now().month);
   bool busy = false;
   String? error;
 
-  CurrencyCode get currency =>
-      profile?.primaryCurrency ?? CurrencyCode.brl;
+  // --- Screen-flow state (mirrors the design prototype's Component.state) ---
+  AuthMode authMode = AuthMode.login;
+  AppSubScreen subScreen = AppSubScreen.root;
+  AppTab tab = AppTab.home;
+  bool notifOpen = false;
+  bool insightDismissed = false;
+
+  // --- Mentor chat ---
+  List<ChatMessage> mentorMessages = const [];
+  int? mentorConversationId;
+  List<String> mentorSuggestions = const [];
+  bool mentorBusy = false;
+  String? mentorError;
+
+  CurrencyCode get currency => profile?.primaryCurrency ?? CurrencyCode.brl;
+
+  OnboardingStep get onboardingStep =>
+      pet == null ? OnboardingStep.petSetup : OnboardingStep.quickSetup;
+
+  /// Whether *this* onboarding pass started without a Pet — decided once,
+  /// the moment `stage` first becomes `onboarding`, so the progress dots on
+  /// `quickSetup` stay correct (2 steps) even after `createPet` makes `pet`
+  /// non-null and `onboardingStep` flips.
+  bool onboardingHadPetStep = false;
+
+  int get onboardingTotalSteps => onboardingHadPetStep ? 2 : 1;
 
   Future<void> restore() async {
     stage = AppStage.loading;
@@ -48,9 +91,7 @@ final class HealthController extends ChangeNotifier {
       await _loadAuthenticatedState();
     } catch (exception) {
       error = exception.toString();
-      stage = exception is ApiException && exception.statusCode == 401
-          ? AppStage.signedOut
-          : AppStage.signedOut;
+      stage = AppStage.signedOut;
     } finally {
       notifyListeners();
     }
@@ -71,9 +112,20 @@ final class HealthController extends ChangeNotifier {
   }
 
   Future<void> _loadAuthenticatedState() async {
+    try {
+      pet = await _repository.getPet();
+    } catch (_) {
+      pet = null;
+    }
+    try {
+      account = await _repository.getCurrentUser();
+    } catch (_) {
+      account = null;
+    }
     final loadedProfile = await _repository.getProfile();
     if (loadedProfile == null) {
       profile = null;
+      onboardingHadPetStep = pet == null;
       stage = AppStage.onboarding;
       return;
     }
@@ -81,11 +133,15 @@ final class HealthController extends ChangeNotifier {
     await _localeController.setLocale(loadedProfile.interfaceLocale);
     stage = AppStage.home;
     await refreshData();
-    try {
-      pet = await _repository.getPet();
-    } catch (_) {
-      pet = null;
-    }
+  }
+
+  /// `POST /api/pets/configure` — shared identity endpoint, not Health-only.
+  /// Advances `onboardingStep` to `quickSetup` as soon as `pet` is set.
+  Future<void> createPet({required PetSpecies species, required String name}) async {
+    await _withBusy(() async {
+      await _repository.configurePet(specie: species.apiValue, name: name);
+      pet = PetIdentity(name: name, species: species.apiValue);
+    });
   }
 
   Future<void> saveOnboarding(HealthProfile value) async {
@@ -95,11 +151,6 @@ final class HealthController extends ChangeNotifier {
       await _localeController.setLocale(saved.interfaceLocale);
       stage = AppStage.home;
       await refreshData();
-      try {
-        pet = await _repository.getPet();
-      } catch (_) {
-        pet = null;
-      }
     });
   }
 
@@ -119,14 +170,25 @@ final class HealthController extends ChangeNotifier {
 
   Future<void> logout() async {
     await _repository.logout();
+    account = null;
     profile = null;
     pet = null;
     summary = null;
     accounts = const [];
     transactions = const [];
+    plannedTransactions = const [];
+    recurrences = const [];
     cards = const [];
     error = null;
     stage = AppStage.signedOut;
+    onboardingHadPetStep = false;
+    authMode = AuthMode.login;
+    subScreen = AppSubScreen.root;
+    tab = AppTab.home;
+    notifOpen = false;
+    insightDismissed = false;
+    mentorMessages = const [];
+    mentorConversationId = null;
     notifyListeners();
   }
 
@@ -148,26 +210,140 @@ final class HealthController extends ChangeNotifier {
         ),
         _repository.getCards(),
         _repository.getSummary(selectedMonth),
+        _repository.getTransactions(status: TransactionStatus.planned),
+        _repository.getRecurrences(),
       ]);
       accounts = results[0] as List<HealthAccount>;
       transactions = results[1] as List<HealthTransaction>;
       cards = results[2] as List<HealthCard>;
       summary = results[3] as MonthlySummary;
+      plannedTransactions = results[4] as List<HealthTransaction>;
+      recurrences = results[5] as List<HealthRecurrence>;
       _ensureCurrency(summary!.currency);
       for (final account in accounts) {
         _ensureCurrency(account.currency);
-      }
-      for (final transaction in transactions) {
-        _ensureCurrency(transaction.amount.currency);
-      }
-      for (final card in cards) {
-        _ensureCurrency(card.currency);
       }
       error = null;
     } catch (exception) {
       error = exception.toString();
     }
     notifyListeners();
+  }
+
+  // --- Debts & income sources ------------------------------------------
+  //
+  // Health has no dedicated "debt"/"income source" resource in the shared
+  // backend. Both are ordinary planned transactions — a debt is a planned
+  // EXPENSE, an income source a planned INCOME — namespaced under
+  // `DebtCategory`/`IncomeCategory` (see category_catalog.dart) so the Home
+  // screen can single them out. Recurring ones live as `HealthRecurrence`
+  // templates; one-off ones as planned transactions with no recurrence link.
+
+  List<HealthRecurrence> get debtRecurrences => recurrences
+      .where((r) =>
+          r.type == TransactionType.expense &&
+          DebtCategory.fromApiCategory(r.category) != null)
+      .toList(growable: false);
+
+  List<HealthTransaction> get oneOffDebts => plannedTransactions
+      .where((t) =>
+          t.type == TransactionType.expense &&
+          DebtCategory.fromApiCategory(t.category) != null)
+      .toList(growable: false);
+
+  List<HealthRecurrence> get incomeRecurrences => recurrences
+      .where((r) =>
+          r.type == TransactionType.income &&
+          IncomeCategory.fromApiCategory(r.category) != null)
+      .toList(growable: false);
+
+  List<HealthTransaction> get oneOffIncomes => plannedTransactions
+      .where((t) =>
+          t.type == TransactionType.income &&
+          IncomeCategory.fromApiCategory(t.category) != null)
+      .toList(growable: false);
+
+  Future<void> addDebt({
+    required DebtCategory category,
+    required String name,
+    required Money value,
+    required bool recurring,
+  }) async {
+    await _withBusy(() async {
+      final accountId = await _ensureDefaultAccount();
+      final now = DateTime.now();
+      if (recurring) {
+        await _repository.createRecurrence(
+          accountId: accountId,
+          type: TransactionType.expense,
+          amount: value,
+          description: name,
+          category: category.apiCategory,
+          dayOfMonth: now.day,
+          startDate: now,
+        );
+      } else {
+        await _repository.createTransaction(
+          accountId: accountId,
+          type: TransactionType.expense,
+          status: TransactionStatus.planned,
+          amount: value,
+          description: name,
+          category: category.apiCategory,
+          date: now,
+        );
+      }
+    });
+    await refreshData();
+  }
+
+  Future<void> addIncome({
+    required IncomeCategory category,
+    required String name,
+    required Money value,
+    required bool recurring,
+  }) async {
+    await _withBusy(() async {
+      final accountId = await _ensureDefaultAccount();
+      final now = DateTime.now();
+      if (recurring) {
+        await _repository.createRecurrence(
+          accountId: accountId,
+          type: TransactionType.income,
+          amount: value,
+          description: name,
+          category: category.apiCategory,
+          dayOfMonth: now.day,
+          startDate: now,
+        );
+      } else {
+        await _repository.createTransaction(
+          accountId: accountId,
+          type: TransactionType.income,
+          status: TransactionStatus.planned,
+          amount: value,
+          description: name,
+          category: category.apiCategory,
+          date: now,
+        );
+      }
+    });
+    await refreshData();
+  }
+
+  /// Returns the id of an account to attach manual entries to, creating a
+  /// single default one the first time it is needed — the design never
+  /// surfaces account selection for debts/income, so this stays invisible.
+  Future<int> _ensureDefaultAccount() async {
+    if (accounts.isNotEmpty) return accounts.first.id;
+    final created = await _repository.createAccount(
+      name: 'Conta principal',
+      type: AccountType.checking,
+      initialBalance: Money.zero(currency),
+      balanceReferenceDate: DateTime.now(),
+    );
+    accounts = [created];
+    return created.id;
   }
 
   Future<void> createAccount({
@@ -245,6 +421,11 @@ final class HealthController extends ChangeNotifier {
     await refreshData();
   }
 
+  Future<void> deleteRecurrence(int id) async {
+    await _withBusy(() => _repository.deleteRecurrence(id));
+    await refreshData();
+  }
+
   Future<void> confirmTransaction(int id) async {
     await _withBusy(() => _repository.confirmTransaction(id));
     await refreshData();
@@ -313,8 +494,7 @@ final class HealthController extends ChangeNotifier {
     await refreshData();
   }
 
-  Future<List<CardInvoice>> getInvoices(int cardId) =>
-      _repository.getInvoices(cardId);
+  Future<List<CardInvoice>> getInvoices(int cardId) => _repository.getInvoices(cardId);
 
   Future<void> payInvoice({
     required int invoiceId,
@@ -328,6 +508,113 @@ final class HealthController extends ChangeNotifier {
           paymentDate: paymentDate,
         ));
     await refreshData();
+  }
+
+  // --- Screen-flow navigation -------------------------------------------
+
+  void setAuthMode(AuthMode mode) {
+    authMode = mode;
+    notifyListeners();
+  }
+
+  void openProfile() {
+    subScreen = AppSubScreen.profile;
+    notifyListeners();
+  }
+
+  void openAddDebt() {
+    subScreen = AppSubScreen.addDebt;
+    notifyListeners();
+  }
+
+  void openAddIncome() {
+    subScreen = AppSubScreen.addIncome;
+    notifyListeners();
+  }
+
+  void closeSubScreen() {
+    subScreen = AppSubScreen.root;
+    notifyListeners();
+  }
+
+  void selectTab(AppTab value) {
+    tab = value;
+    notifOpen = false;
+    notifyListeners();
+  }
+
+  void toggleNotif() {
+    notifOpen = !notifOpen;
+    notifyListeners();
+  }
+
+  void dismissInsight() {
+    insightDismissed = true;
+    notifyListeners();
+  }
+
+  // --- Mentor chat --------------------------------------------------------
+
+  Future<void> loadMentorSuggestions() async {
+    try {
+      final language = _localeController.current.tag.split('-').first;
+      mentorSuggestions = await _repository.getMentorSuggestions(language: language);
+    } catch (_) {
+      mentorSuggestions = const [];
+    }
+    notifyListeners();
+  }
+
+  void startNewMentorConversation() {
+    mentorConversationId = null;
+    mentorMessages = const [];
+    mentorError = null;
+    notifyListeners();
+  }
+
+  Future<void> sendMentorMessage(String text) async {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty || mentorBusy) return;
+    final userMessage = ChatMessage(
+      id: 'u-${DateTime.now().microsecondsSinceEpoch}',
+      author: ChatAuthor.user,
+      text: trimmed,
+    );
+    mentorMessages = [...mentorMessages, userMessage];
+    mentorBusy = true;
+    mentorError = null;
+    notifyListeners();
+    try {
+      final reply = await _repository.sendMentorMessage(
+        message: trimmed,
+        conversationId: mentorConversationId,
+      );
+      mentorConversationId = reply.conversationId;
+      mentorMessages = [
+        ...mentorMessages,
+        ChatMessage(
+          id: 'm-${DateTime.now().microsecondsSinceEpoch}',
+          author: ChatAuthor.mentor,
+          text: reply.reply,
+          sources: reply.sources,
+        ),
+      ];
+    } catch (exception) {
+      mentorError = exception.toString();
+    } finally {
+      mentorBusy = false;
+      notifyListeners();
+    }
+  }
+
+  void toggleMessageWhy(String messageId) {
+    for (final message in mentorMessages) {
+      if (message.id == messageId) {
+        message.whyOpen = !message.whyOpen;
+        break;
+      }
+    }
+    notifyListeners();
   }
 
   void _ensureCurrency(CurrencyCode actual) {
