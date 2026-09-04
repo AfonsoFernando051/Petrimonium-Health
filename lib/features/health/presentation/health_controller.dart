@@ -265,6 +265,7 @@ final class HealthController extends ChangeNotifier {
   List<HealthRecurrence> get debtRecurrences => recurrences
       .where(
         (r) =>
+            r.active &&
             r.type == TransactionType.expense &&
             DebtCategory.fromApiCategory(r.category) != null,
       )
@@ -281,6 +282,7 @@ final class HealthController extends ChangeNotifier {
   List<HealthRecurrence> get incomeRecurrences => recurrences
       .where(
         (r) =>
+            r.active &&
             r.type == TransactionType.income &&
             IncomeCategory.fromApiCategory(r.category) != null,
       )

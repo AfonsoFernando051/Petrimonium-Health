@@ -308,6 +308,7 @@ final class HealthRecurrence {
     required this.dayOfMonth,
     required this.startDate,
     this.endDate,
+    this.active = true,
   });
 
   factory HealthRecurrence.fromJson(Map<String, dynamic> json) {
@@ -322,6 +323,7 @@ final class HealthRecurrence {
       dayOfMonth: (json['dayOfMonth'] as num).toInt(),
       startDate: _date(json['startDate']),
       endDate: json['endDate'] == null ? null : _date(json['endDate']),
+      active: json['active'] as bool? ?? true,
     );
   }
 
@@ -334,6 +336,12 @@ final class HealthRecurrence {
   final int dayOfMonth;
   final DateTime startDate;
   final DateTime? endDate;
+
+  /// `DELETE /recurrences/{id}` deactivates rather than deletes the row
+  /// (docs/API.md: "DELETE desativa a recorrência..."), so `GET /recurrences`
+  /// keeps returning it with `active: false` — callers must filter this out
+  /// themselves; see `HealthController.debtRecurrences`/`incomeRecurrences`.
+  final bool active;
 }
 
 /// `GET /api/users/me` — shared identity endpoint (Academy/Wallet/Health all
