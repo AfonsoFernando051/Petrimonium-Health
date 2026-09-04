@@ -53,6 +53,14 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
 
+# Keep the platform implementations on their last pre-native-hooks releases.
+# Newer versions pull jni/objective_c code assets and currently make both the
+# Linux and Android builds look for ld.lld in /usr/lib/llvm-20/bin, which is
+# not part of this project's supported toolchain. Wallet uses the same pins.
+dependency_overrides:
+  path_provider_android: 2.2.10
+  path_provider_foundation: 2.3.2
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 

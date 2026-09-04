@@ -7,7 +7,10 @@ plugins {
 
 android {
     namespace = "com.petrimonium.petrimonium_health"
-    compileSdk = flutter.compileSdkVersion
+    // flutter_secure_storage 11 requires API 37. The SDK is installed in the
+    // project toolchain, and compileSdk does not change the minimum Android
+    // version supported by the app.
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

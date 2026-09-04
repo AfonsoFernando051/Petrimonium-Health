@@ -87,9 +87,11 @@ final class RemoteHealthRepository implements HealthRepository {
 
   @override
   Future<HealthProfile> saveProfile(HealthProfile profile) async =>
-      HealthProfile.fromJson(await _object(
-        () => _api.put('${ApiConfig.healthBase}/profile', profile.toJson()),
-      ));
+      HealthProfile.fromJson(
+        await _object(
+          () => _api.put('${ApiConfig.healthBase}/profile', profile.toJson()),
+        ),
+      );
 
   @override
   Future<PetIdentity?> getPet() async {
@@ -108,7 +110,10 @@ final class RemoteHealthRepository implements HealthRepository {
   }
 
   @override
-  Future<void> configurePet({required String specie, required String name}) async {
+  Future<void> configurePet({
+    required String specie,
+    required String name,
+  }) async {
     final response = await _api.post('/api/pets/configure', {
       'specie': specie,
       'name': name,
@@ -120,8 +125,11 @@ final class RemoteHealthRepository implements HealthRepository {
 
   @override
   Future<MonthlySummary> getSummary(DateTime month) async {
-    final key = '${month.year.toString().padLeft(4, '0')}-${month.month.toString().padLeft(2, '0')}';
-    final response = await _api.get('${ApiConfig.healthBase}/summary?month=$key');
+    final key =
+        '${month.year.toString().padLeft(4, '0')}-${month.month.toString().padLeft(2, '0')}';
+    final response = await _api.get(
+      '${ApiConfig.healthBase}/summary?month=$key',
+    );
     if (response.statusCode != 200) throwApiError(response);
     return MonthlySummary.fromJson(decodeObject(response));
   }
@@ -130,7 +138,9 @@ final class RemoteHealthRepository implements HealthRepository {
   Future<List<HealthAccount>> getAccounts() async {
     final response = await _api.get('${ApiConfig.healthBase}/accounts');
     if (response.statusCode != 200) throwApiError(response);
-    return decodeList(response).map(HealthAccount.fromJson).toList(growable: false);
+    return decodeList(
+      response,
+    ).map(HealthAccount.fromJson).toList(growable: false);
   }
 
   @override
@@ -139,30 +149,33 @@ final class RemoteHealthRepository implements HealthRepository {
     required AccountType type,
     required Money initialBalance,
     required DateTime balanceReferenceDate,
-  }) async =>
-      HealthAccount.fromJson(await _object(
-        () => _api.post('${ApiConfig.healthBase}/accounts', {
-          'name': name,
-          'type': type.apiValue,
-          'initialBalance': initialBalance.toDecimalString(),
-          'balanceReferenceDate': _isoDate(balanceReferenceDate),
-          'currency': initialBalance.currency.code,
-          'idempotencyKey': _idempotencyKey(),
-        }),
-        success: const {200, 201},
-      ));
+  }) async => HealthAccount.fromJson(
+    await _object(
+      () => _api.post('${ApiConfig.healthBase}/accounts', {
+        'name': name,
+        'type': type.apiValue,
+        'initialBalance': initialBalance.toDecimalString(),
+        'balanceReferenceDate': _isoDate(balanceReferenceDate),
+        'currency': initialBalance.currency.code,
+        'idempotencyKey': _idempotencyKey(),
+      }),
+      success: const {200, 201},
+    ),
+  );
 
   @override
   Future<HealthAccount> updateAccount(HealthAccount account) async =>
-      HealthAccount.fromJson(await _object(
-        () => _api.put('${ApiConfig.healthBase}/accounts/${account.id}', {
-          'name': account.name,
-          'type': account.type.apiValue,
-          'initialBalance': account.initialBalance.toDecimalString(),
-          'balanceReferenceDate': _isoDate(account.balanceReferenceDate),
-          'currency': account.currency.code,
-        }),
-      ));
+      HealthAccount.fromJson(
+        await _object(
+          () => _api.put('${ApiConfig.healthBase}/accounts/${account.id}', {
+            'name': account.name,
+            'type': account.type.apiValue,
+            'initialBalance': account.initialBalance.toDecimalString(),
+            'balanceReferenceDate': _isoDate(account.balanceReferenceDate),
+            'currency': account.currency.code,
+          }),
+        ),
+      );
 
   @override
   Future<void> archiveAccount(int id) async {
@@ -193,21 +206,21 @@ final class RemoteHealthRepository implements HealthRepository {
     );
     final response = await _api.get(uri.toString());
     if (response.statusCode != 200) throwApiError(response);
-    return decodeList(response)
-        .map(HealthTransaction.fromJson)
-        .toList(growable: false);
+    return decodeList(
+      response,
+    ).map(HealthTransaction.fromJson).toList(growable: false);
   }
 
   Map<String, dynamic> _transactionBody(HealthTransaction transaction) => {
-        'accountId': transaction.accountId,
-        'type': transaction.type.apiValue,
-        'status': transaction.status.apiValue,
-        'amount': transaction.amount.toDecimalString(),
-        'currency': transaction.amount.currency.code,
-        'description': transaction.description,
-        'category': transaction.category,
-        'date': _isoDate(transaction.date),
-      };
+    'accountId': transaction.accountId,
+    'type': transaction.type.apiValue,
+    'status': transaction.status.apiValue,
+    'amount': transaction.amount.toDecimalString(),
+    'currency': transaction.amount.currency.code,
+    'description': transaction.description,
+    'category': transaction.category,
+    'date': _isoDate(transaction.date),
+  };
 
   @override
   Future<HealthTransaction> createTransaction({
@@ -218,36 +231,40 @@ final class RemoteHealthRepository implements HealthRepository {
     required String description,
     required String category,
     required DateTime date,
-  }) async =>
-      HealthTransaction.fromJson(await _object(
-        () => _api.post('${ApiConfig.healthBase}/transactions', {
-          'accountId': accountId,
-          'type': type.apiValue,
-          'status': status.apiValue,
-          'amount': amount.toDecimalString(),
-          'currency': amount.currency.code,
-          'description': description,
-          'category': category,
-          'date': _isoDate(date),
-          'idempotencyKey': _idempotencyKey(),
-        }),
-        success: const {200, 201},
-      ));
+  }) async => HealthTransaction.fromJson(
+    await _object(
+      () => _api.post('${ApiConfig.healthBase}/transactions', {
+        'accountId': accountId,
+        'type': type.apiValue,
+        'status': status.apiValue,
+        'amount': amount.toDecimalString(),
+        'currency': amount.currency.code,
+        'description': description,
+        'category': category,
+        'date': _isoDate(date),
+        'idempotencyKey': _idempotencyKey(),
+      }),
+      success: const {200, 201},
+    ),
+  );
 
   @override
   Future<HealthTransaction> updateTransaction(
     HealthTransaction transaction,
-  ) async =>
-      HealthTransaction.fromJson(await _object(
-        () => _api.put(
-          '${ApiConfig.healthBase}/transactions/${transaction.id}',
-          _transactionBody(transaction),
-        ),
-      ));
+  ) async => HealthTransaction.fromJson(
+    await _object(
+      () => _api.put(
+        '${ApiConfig.healthBase}/transactions/${transaction.id}',
+        _transactionBody(transaction),
+      ),
+    ),
+  );
 
   @override
   Future<void> deleteTransaction(int id) async {
-    final response = await _api.delete('${ApiConfig.healthBase}/transactions/$id');
+    final response = await _api.delete(
+      '${ApiConfig.healthBase}/transactions/$id',
+    );
     if (response.statusCode != 200 && response.statusCode != 204) {
       throwApiError(response);
     }
@@ -255,12 +272,14 @@ final class RemoteHealthRepository implements HealthRepository {
 
   @override
   Future<HealthTransaction> confirmTransaction(int id) async =>
-      HealthTransaction.fromJson(await _object(
-        () => _api.post(
-          '${ApiConfig.healthBase}/transactions/$id/confirm',
-          const <String, dynamic>{},
+      HealthTransaction.fromJson(
+        await _object(
+          () => _api.post(
+            '${ApiConfig.healthBase}/transactions/$id/confirm',
+            const <String, dynamic>{},
+          ),
         ),
-      ));
+      );
 
   @override
   Future<void> createTransfer({
@@ -316,14 +335,16 @@ final class RemoteHealthRepository implements HealthRepository {
   Future<List<HealthRecurrence>> getRecurrences() async {
     final response = await _api.get('${ApiConfig.healthBase}/recurrences');
     if (response.statusCode != 200) throwApiError(response);
-    return decodeList(response)
-        .map(HealthRecurrence.fromJson)
-        .toList(growable: false);
+    return decodeList(
+      response,
+    ).map(HealthRecurrence.fromJson).toList(growable: false);
   }
 
   @override
   Future<void> deleteRecurrence(int id) async {
-    final response = await _api.delete('${ApiConfig.healthBase}/recurrences/$id');
+    final response = await _api.delete(
+      '${ApiConfig.healthBase}/recurrences/$id',
+    );
     if (response.statusCode != 200 && response.statusCode != 204) {
       throwApiError(response);
     }
@@ -333,7 +354,9 @@ final class RemoteHealthRepository implements HealthRepository {
   Future<List<HealthCard>> getCards() async {
     final response = await _api.get('${ApiConfig.healthBase}/cards');
     if (response.statusCode != 200) throwApiError(response);
-    return decodeList(response).map(HealthCard.fromJson).toList(growable: false);
+    return decodeList(
+      response,
+    ).map(HealthCard.fromJson).toList(growable: false);
   }
 
   @override
@@ -342,28 +365,30 @@ final class RemoteHealthRepository implements HealthRepository {
     required CurrencyCode currency,
     required int closingDay,
     required int dueDay,
-  }) async =>
-      HealthCard.fromJson(await _object(
-        () => _api.post('${ApiConfig.healthBase}/cards', {
-          'name': name,
-          'currency': currency.code,
-          'closingDay': closingDay,
-          'dueDay': dueDay,
-          'idempotencyKey': _idempotencyKey(),
-        }),
-        success: const {200, 201},
-      ));
+  }) async => HealthCard.fromJson(
+    await _object(
+      () => _api.post('${ApiConfig.healthBase}/cards', {
+        'name': name,
+        'currency': currency.code,
+        'closingDay': closingDay,
+        'dueDay': dueDay,
+        'idempotencyKey': _idempotencyKey(),
+      }),
+      success: const {200, 201},
+    ),
+  );
 
   @override
-  Future<HealthCard> updateCard(HealthCard card) async =>
-      HealthCard.fromJson(await _object(
-        () => _api.put('${ApiConfig.healthBase}/cards/${card.id}', {
-          'name': card.name,
-          'currency': card.currency.code,
-          'closingDay': card.closingDay,
-          'dueDay': card.dueDay,
-        }),
-      ));
+  Future<HealthCard> updateCard(HealthCard card) async => HealthCard.fromJson(
+    await _object(
+      () => _api.put('${ApiConfig.healthBase}/cards/${card.id}', {
+        'name': card.name,
+        'currency': card.currency.code,
+        'closingDay': card.closingDay,
+        'dueDay': card.dueDay,
+      }),
+    ),
+  );
 
   @override
   Future<void> archiveCard(int id) async {
@@ -382,18 +407,16 @@ final class RemoteHealthRepository implements HealthRepository {
     required DateTime purchaseDate,
     required int installmentCount,
   }) async {
-    final response = await _api.post(
-      '${ApiConfig.healthBase}/cards/$cardId/purchases',
-      {
-        'amount': amount.toDecimalString(),
-        'currency': amount.currency.code,
-        'description': description,
-        'category': category,
-        'purchaseDate': _isoDate(purchaseDate),
-        'installmentCount': installmentCount,
-        'idempotencyKey': _idempotencyKey(),
-      },
-    );
+    final response = await _api
+        .post('${ApiConfig.healthBase}/cards/$cardId/purchases', {
+          'amount': amount.toDecimalString(),
+          'currency': amount.currency.code,
+          'description': description,
+          'category': category,
+          'purchaseDate': _isoDate(purchaseDate),
+          'installmentCount': installmentCount,
+          'idempotencyKey': _idempotencyKey(),
+        });
     if (response.statusCode != 200 && response.statusCode != 201) {
       throwApiError(response);
     }
@@ -401,10 +424,13 @@ final class RemoteHealthRepository implements HealthRepository {
 
   @override
   Future<List<CardInvoice>> getInvoices(int cardId) async {
-    final response =
-        await _api.get('${ApiConfig.healthBase}/cards/$cardId/invoices');
+    final response = await _api.get(
+      '${ApiConfig.healthBase}/cards/$cardId/invoices',
+    );
     if (response.statusCode != 200) throwApiError(response);
-    return decodeList(response).map(CardInvoice.fromJson).toList(growable: false);
+    return decodeList(
+      response,
+    ).map(CardInvoice.fromJson).toList(growable: false);
   }
 
   @override
@@ -414,15 +440,13 @@ final class RemoteHealthRepository implements HealthRepository {
     required CurrencyCode currency,
     required DateTime paymentDate,
   }) async {
-    final response = await _api.post(
-      '${ApiConfig.healthBase}/cards/invoices/$invoiceId/pay',
-      {
-        'accountId': accountId,
-        'currency': currency.code,
-        'paymentDate': _isoDate(paymentDate),
-        'idempotencyKey': _idempotencyKey(),
-      },
-    );
+    final response = await _api
+        .post('${ApiConfig.healthBase}/cards/invoices/$invoiceId/pay', {
+          'accountId': accountId,
+          'currency': currency.code,
+          'paymentDate': _isoDate(paymentDate),
+          'idempotencyKey': _idempotencyKey(),
+        });
     if (response.statusCode != 200 && response.statusCode != 201) {
       throwApiError(response);
     }
@@ -449,15 +473,13 @@ final class RemoteHealthRepository implements HealthRepository {
   Future<MentorReply> sendMentorMessage({
     required String message,
     int? conversationId,
-  }) async =>
-      MentorReply.fromJson(await _object(
-        () => _api.post('/api/mentor/chat', {
-          'message': message,
-          if (conversationId != null) 'conversationId': conversationId,
-          'context': {
-            'currentScreen': 'health_home',
-            'language': 'pt',
-          },
-        }),
-      ));
+  }) async => MentorReply.fromJson(
+    await _object(
+      () => _api.post('/api/mentor/chat', {
+        'message': message,
+        'conversationId': ?conversationId,
+        'context': {'currentScreen': 'health_home', 'language': 'pt'},
+      }),
+    ),
+  );
 }

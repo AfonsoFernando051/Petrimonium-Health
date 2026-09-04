@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Health is an API client in every build mode, not only while debugging. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+
     <application
         android:label="petrimonium_health"
         android:name="${applicationName}"

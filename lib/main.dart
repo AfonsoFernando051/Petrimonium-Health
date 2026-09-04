@@ -36,13 +36,22 @@ class _PetrimoniumHealthAppState extends State<PetrimoniumHealthApp> {
     super.initState();
     _localeController = LocaleController();
     final repository = RemoteHealthRepository(ApiClient());
-    _controller = HealthController(repository: repository, localeController: _localeController);
+    _controller = HealthController(
+      repository: repository,
+      localeController: _localeController,
+    );
     _appListenable = Listenable.merge([_controller, _localeController]);
     _bootstrap();
   }
 
   Future<void> _bootstrap() async {
-    await _localeController.loadCached();
+    // A corrupt/unavailable local preferences store must not strand the app
+    // on the splash screen. The backend profile remains the source of truth.
+    try {
+      await _localeController.loadCached();
+    } catch (_) {
+      // Continue with the safe pt-BR default from LocaleController.
+    }
     await _controller.restore();
   }
 
@@ -70,7 +79,10 @@ class _PetrimoniumHealthAppState extends State<PetrimoniumHealthApp> {
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
-          home: HealthScope(controller: _controller, child: const _RootRouter()),
+          home: HealthScope(
+            controller: _controller,
+            child: const _RootRouter(),
+          ),
         );
       },
     );

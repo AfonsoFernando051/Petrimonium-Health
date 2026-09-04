@@ -33,8 +33,8 @@ final class HealthController extends ChangeNotifier {
   HealthController({
     required HealthRepository repository,
     required LocaleController localeController,
-  })  : _repository = repository,
-        _localeController = localeController;
+  }) : _repository = repository,
+       _localeController = localeController;
 
   final HealthRepository _repository;
   final LocaleController _localeController;
@@ -51,6 +51,7 @@ final class HealthController extends ChangeNotifier {
   List<HealthCard> cards = const [];
   DateTime selectedMonth = DateTime(DateTime.now().year, DateTime.now().month);
   bool busy = false;
+  bool refreshing = false;
   String? error;
 
   // --- Screen-flow state (mirrors the design prototype's Component.state) ---
@@ -112,17 +113,32 @@ final class HealthController extends ChangeNotifier {
   }
 
   Future<void> _loadAuthenticatedState() async {
-    try {
-      pet = await _repository.getPet();
-    } catch (_) {
-      pet = null;
+    Future<PetIdentity?> loadPet() async {
+      try {
+        return await _repository.getPet();
+      } catch (_) {
+        return null;
+      }
     }
-    try {
-      account = await _repository.getCurrentUser();
-    } catch (_) {
-      account = null;
+
+    Future<AccountIdentity?> loadAccount() async {
+      try {
+        return await _repository.getCurrentUser();
+      } catch (_) {
+        return null;
+      }
     }
-    final loadedProfile = await _repository.getProfile();
+
+    // These resources are independent. Loading them concurrently bounds a
+    // stalled/offline startup to one HTTP timeout instead of three in a row.
+    final results = await Future.wait<Object?>([
+      loadPet(),
+      loadAccount(),
+      _repository.getProfile(),
+    ]);
+    pet = results[0] as PetIdentity?;
+    account = results[1] as AccountIdentity?;
+    final loadedProfile = results[2] as HealthProfile?;
     if (loadedProfile == null) {
       profile = null;
       onboardingHadPetStep = pet == null;
@@ -137,7 +153,10 @@ final class HealthController extends ChangeNotifier {
 
   /// `POST /api/pets/configure` — shared identity endpoint, not Health-only.
   /// Advances `onboardingStep` to `quickSetup` as soon as `pet` is set.
-  Future<void> createPet({required PetSpecies species, required String name}) async {
+  Future<void> createPet({
+    required PetSpecies species,
+    required String name,
+  }) async {
     await _withBusy(() async {
       await _repository.configurePet(specie: species.apiValue, name: name);
       pet = PetIdentity(name: name, species: species.apiValue);
@@ -200,7 +219,9 @@ final class HealthController extends ChangeNotifier {
 
   Future<void> refreshData() async {
     final currentProfile = profile;
-    if (currentProfile == null) return;
+    if (currentProfile == null || refreshing) return;
+    refreshing = true;
+    notifyListeners();
     try {
       final results = await Future.wait<Object>([
         _repository.getAccounts(),
@@ -226,8 +247,10 @@ final class HealthController extends ChangeNotifier {
       error = null;
     } catch (exception) {
       error = exception.toString();
+    } finally {
+      refreshing = false;
+      notifyListeners();
     }
-    notifyListeners();
   }
 
   // --- Debts & income sources ------------------------------------------
@@ -240,27 +263,35 @@ final class HealthController extends ChangeNotifier {
   // templates; one-off ones as planned transactions with no recurrence link.
 
   List<HealthRecurrence> get debtRecurrences => recurrences
-      .where((r) =>
-          r.type == TransactionType.expense &&
-          DebtCategory.fromApiCategory(r.category) != null)
+      .where(
+        (r) =>
+            r.type == TransactionType.expense &&
+            DebtCategory.fromApiCategory(r.category) != null,
+      )
       .toList(growable: false);
 
   List<HealthTransaction> get oneOffDebts => plannedTransactions
-      .where((t) =>
-          t.type == TransactionType.expense &&
-          DebtCategory.fromApiCategory(t.category) != null)
+      .where(
+        (t) =>
+            t.type == TransactionType.expense &&
+            DebtCategory.fromApiCategory(t.category) != null,
+      )
       .toList(growable: false);
 
   List<HealthRecurrence> get incomeRecurrences => recurrences
-      .where((r) =>
-          r.type == TransactionType.income &&
-          IncomeCategory.fromApiCategory(r.category) != null)
+      .where(
+        (r) =>
+            r.type == TransactionType.income &&
+            IncomeCategory.fromApiCategory(r.category) != null,
+      )
       .toList(growable: false);
 
   List<HealthTransaction> get oneOffIncomes => plannedTransactions
-      .where((t) =>
-          t.type == TransactionType.income &&
-          IncomeCategory.fromApiCategory(t.category) != null)
+      .where(
+        (t) =>
+            t.type == TransactionType.income &&
+            IncomeCategory.fromApiCategory(t.category) != null,
+      )
       .toList(growable: false);
 
   Future<void> addDebt({
@@ -353,12 +384,14 @@ final class HealthController extends ChangeNotifier {
     required DateTime referenceDate,
   }) async {
     _ensureCurrency(initialBalance.currency);
-    await _withBusy(() => _repository.createAccount(
-          name: name,
-          type: type,
-          initialBalance: initialBalance,
-          balanceReferenceDate: referenceDate,
-        ));
+    await _withBusy(
+      () => _repository.createAccount(
+        name: name,
+        type: type,
+        initialBalance: initialBalance,
+        balanceReferenceDate: referenceDate,
+      ),
+    );
     await refreshData();
   }
 
@@ -439,13 +472,15 @@ final class HealthController extends ChangeNotifier {
     required String description,
   }) async {
     _ensureCurrency(amount.currency);
-    await _withBusy(() => _repository.createTransfer(
-          fromAccountId: fromAccountId,
-          toAccountId: toAccountId,
-          amount: amount,
-          date: date,
-          description: description,
-        ));
+    await _withBusy(
+      () => _repository.createTransfer(
+        fromAccountId: fromAccountId,
+        toAccountId: toAccountId,
+        amount: amount,
+        date: date,
+        description: description,
+      ),
+    );
     await refreshData();
   }
 
@@ -454,12 +489,14 @@ final class HealthController extends ChangeNotifier {
     required int closingDay,
     required int dueDay,
   }) async {
-    await _withBusy(() => _repository.createCard(
-          name: name,
-          currency: currency,
-          closingDay: closingDay,
-          dueDay: dueDay,
-        ));
+    await _withBusy(
+      () => _repository.createCard(
+        name: name,
+        currency: currency,
+        closingDay: closingDay,
+        dueDay: dueDay,
+      ),
+    );
     await refreshData();
   }
 
@@ -483,30 +520,35 @@ final class HealthController extends ChangeNotifier {
     required int installmentCount,
   }) async {
     _ensureCurrency(amount.currency);
-    await _withBusy(() => _repository.createCardPurchase(
-          cardId: cardId,
-          amount: amount,
-          description: description,
-          category: category,
-          purchaseDate: purchaseDate,
-          installmentCount: installmentCount,
-        ));
+    await _withBusy(
+      () => _repository.createCardPurchase(
+        cardId: cardId,
+        amount: amount,
+        description: description,
+        category: category,
+        purchaseDate: purchaseDate,
+        installmentCount: installmentCount,
+      ),
+    );
     await refreshData();
   }
 
-  Future<List<CardInvoice>> getInvoices(int cardId) => _repository.getInvoices(cardId);
+  Future<List<CardInvoice>> getInvoices(int cardId) =>
+      _repository.getInvoices(cardId);
 
   Future<void> payInvoice({
     required int invoiceId,
     required int accountId,
     required DateTime paymentDate,
   }) async {
-    await _withBusy(() => _repository.payInvoice(
-          invoiceId: invoiceId,
-          accountId: accountId,
-          currency: currency,
-          paymentDate: paymentDate,
-        ));
+    await _withBusy(
+      () => _repository.payInvoice(
+        invoiceId: invoiceId,
+        accountId: accountId,
+        currency: currency,
+        paymentDate: paymentDate,
+      ),
+    );
     await refreshData();
   }
 
@@ -558,7 +600,9 @@ final class HealthController extends ChangeNotifier {
   Future<void> loadMentorSuggestions() async {
     try {
       final language = _localeController.current.tag.split('-').first;
-      mentorSuggestions = await _repository.getMentorSuggestions(language: language);
+      mentorSuggestions = await _repository.getMentorSuggestions(
+        language: language,
+      );
     } catch (_) {
       mentorSuggestions = const [];
     }

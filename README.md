@@ -51,14 +51,21 @@ O backend local escuta em `http://localhost:8081`. As configurações sensíveis
 cd Petrimonium-Health
 flutter pub get
 flutter gen-l10n
-flutter run --dart-define=API_BASE_URL=http://localhost:8081
+flutter run -d linux --no-pub --dart-define=API_BASE_URL=http://localhost:8081
 ```
 
 No emulador Android, use `http://10.0.2.2:8081` no lugar de `localhost`:
 
 ```sh
-flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8081
+flutter devices
+flutter run -d emulator-5554 --no-pub --dart-define=API_BASE_URL=http://10.0.2.2:8081
 ```
+
+Substitua `emulator-5554` pelo identificador mostrado por `flutter devices`, se
+for diferente. Para consumir menos memória, prefira o destino Linux durante o
+desenvolvimento e mantenha somente um destino aberto. A compilação Android do
+projeto está limitada a dois workers e 2 GB de heap, sem daemon Gradle
+persistente.
 
 ## Verificações locais
 

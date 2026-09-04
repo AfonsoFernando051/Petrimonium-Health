@@ -30,16 +30,30 @@ class HealthPrimaryButton extends StatelessWidget {
           onPressed: enabled ? onPressed : null,
           style: ElevatedButton.styleFrom(
             backgroundColor: accent,
-            disabledBackgroundColor: HealthColors.textPrimary.withValues(alpha: .12),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            disabledBackgroundColor: HealthColors.textPrimary.withValues(
+              alpha: .12,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
           ),
           child: busy
               ? const SizedBox(
                   width: 22,
                   height: 22,
-                  child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white),
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.4,
+                    color: Colors.white,
+                  ),
                 )
-              : Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
+              : Text(
+                  label,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
+                ),
         ),
       ),
     );
@@ -92,9 +106,16 @@ class HealthChip extends StatelessWidget {
   }
 }
 
-/// A rounded white card with the design's default border/padding.
-class HealthCard extends StatelessWidget {
-  const HealthCard({super.key, required this.child, this.padding = const EdgeInsets.all(16)});
+/// The rounded white surface every section of the summary sits on. Named
+/// "panel", not "card": in this app a card is a credit card (see
+/// [HealthCard] in the domain models), and a screen that shows invoices
+/// needs both names in scope at once.
+class HealthPanel extends StatelessWidget {
+  const HealthPanel({
+    super.key,
+    required this.child,
+    this.padding = const EdgeInsets.all(16),
+  });
 
   final Widget child;
   final EdgeInsets padding;
@@ -118,7 +139,12 @@ class HealthCard extends StatelessWidget {
 /// (PRD requirement: data, calculation and AI interpretation must be
 /// visually distinguishable, never relying on color alone).
 class ProvenanceBadge extends StatelessWidget {
-  const ProvenanceBadge({super.key, required this.label, required this.color, required this.tint});
+  const ProvenanceBadge({
+    super.key,
+    required this.label,
+    required this.color,
+    required this.tint,
+  });
 
   final String label;
   final Color color;
@@ -135,7 +161,12 @@ class ProvenanceBadge extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: .5, color: color),
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          letterSpacing: .5,
+          color: color,
+        ),
       ),
     );
   }
@@ -161,7 +192,9 @@ class ProgressDots extends StatelessWidget {
           width: active ? 22 : 6,
           height: 6,
           decoration: BoxDecoration(
-            color: active ? accent : HealthColors.textPrimary.withValues(alpha: .14),
+            color: active
+                ? accent
+                : HealthColors.textPrimary.withValues(alpha: .14),
             borderRadius: BorderRadius.circular(999),
           ),
         );
