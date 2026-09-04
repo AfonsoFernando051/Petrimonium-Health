@@ -14,9 +14,8 @@ import '../money/money_format.dart';
 import '../theme/health_theme.dart';
 import 'health_scope.dart';
 
-/// Everything under `screenIsApp`: the top bar (logo, notifications bell,
-/// settings gear), the two tabs (Início/Mentor), and the stacked
-/// sub-screens (perfil, adicionar dívida, adicionar renda).
+/// Everything under `screenIsApp`: the top bar, the four primary sections,
+/// and the stacked profile/onboarding helper screens.
 class AppShell extends StatelessWidget {
   const AppShell({super.key});
 
@@ -347,25 +346,29 @@ class _NavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = active ? accent : HealthColors.textMuted;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 20, color: color),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 9.5,
-                fontWeight: FontWeight.w600,
-                color: color,
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 20, color: color),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

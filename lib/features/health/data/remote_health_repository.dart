@@ -341,6 +341,26 @@ final class RemoteHealthRepository implements HealthRepository {
   }
 
   @override
+  Future<HealthRecurrence> updateRecurrence(
+    HealthRecurrence recurrence,
+  ) async => HealthRecurrence.fromJson(
+    await _object(
+      () => _api.put('${ApiConfig.healthBase}/recurrences/${recurrence.id}', {
+        'accountId': recurrence.accountId,
+        'type': recurrence.type.apiValue,
+        'amount': recurrence.amount.toDecimalString(),
+        'currency': recurrence.amount.currency.code,
+        'description': recurrence.description,
+        'category': recurrence.category,
+        'dayOfMonth': recurrence.dayOfMonth,
+        'startDate': _isoDate(recurrence.startDate),
+        if (recurrence.endDate != null)
+          'endDate': _isoDate(recurrence.endDate!),
+      }),
+    ),
+  );
+
+  @override
   Future<void> deleteRecurrence(int id) async {
     final response = await _api.delete(
       '${ApiConfig.healthBase}/recurrences/$id',
