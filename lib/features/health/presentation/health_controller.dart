@@ -21,9 +21,9 @@ enum AuthMode { login, signup }
 
 /// Screen stacked above the main tab scaffold (back-navigable), mirroring
 /// the prototype's `subScreen`.
-enum AppSubScreen { root, profile, addDebt, addIncome }
+enum AppSubScreen { root, profile, regionalPreferences, addDebt, addIncome }
 
-enum AppTab { home, mentor }
+enum AppTab { home, transactions, accounts, mentor }
 
 final class CurrencyLockedException implements Exception {
   const CurrencyLockedException();
@@ -561,6 +561,11 @@ final class HealthController extends ChangeNotifier {
 
   void openProfile() {
     subScreen = AppSubScreen.profile;
+    notifyListeners();
+  }
+
+  void openRegionalPreferences() {
+    subScreen = AppSubScreen.regionalPreferences;
     notifyListeners();
   }
 

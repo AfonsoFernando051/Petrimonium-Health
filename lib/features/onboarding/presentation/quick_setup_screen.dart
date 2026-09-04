@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/app/health_scope.dart';
+import '../../../core/money/money.dart';
 import '../../../core/profile/health_profile.dart';
 import '../../../core/theme/health_theme.dart';
 import '../../../core/widgets/health_widgets.dart';
 import '../../../l10n/app_localizations.dart';
 
-/// `screenIsQuickSetup` — país/moeda/idioma. Currency is never chosen
-/// directly; it is derived from the country, per the ecosystem PRD
-/// (`docs/API.md`: "os campos são independentes... o servidor não troca
-/// moeda ou idioma por inferência"). The design still shows currency, but as
-/// a read-only outcome of the country choice, and the confirmation card
-/// leaves the currency detail out entirely (per the design chat history).
+/// `screenIsQuickSetup` — país/moeda/idioma are persisted independently.
+/// Changing the country applies the regional suggestion, but the user can
+/// override currency and language before saving.
 class QuickSetupScreen extends StatefulWidget {
   const QuickSetupScreen({super.key});
 
@@ -21,6 +19,7 @@ class QuickSetupScreen extends StatefulWidget {
 
 class _QuickSetupScreenState extends State<QuickSetupScreen> {
   CountryCode _country = CountryCode.brazil;
+  CurrencyCode _currency = CurrencyCode.brl;
   InterfaceLocale _locale = InterfaceLocale.ptBr;
   String? _error;
 
@@ -28,6 +27,7 @@ class _QuickSetupScreenState extends State<QuickSetupScreen> {
     final suggestion = suggestionFor(country);
     setState(() {
       _country = country;
+      _currency = suggestion.currency;
       _locale = suggestion.locale;
     });
   }
@@ -38,7 +38,7 @@ class _QuickSetupScreenState extends State<QuickSetupScreen> {
     setState(() => _error = null);
     final profile = HealthProfile(
       country: _country,
-      primaryCurrency: suggestionFor(_country).currency,
+      primaryCurrency: _currency,
       interfaceLocale: _locale,
     );
     try {
@@ -67,13 +67,21 @@ class _QuickSetupScreenState extends State<QuickSetupScreen> {
                   Text(
                     l10n.quickSetupTitle,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: HealthColors.textPrimary),
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                      color: HealthColors.textPrimary,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     l10n.quickSetupSubtitle,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 13.5, color: HealthColors.textSecondary, height: 1.4),
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      color: HealthColors.textSecondary,
+                      height: 1.4,
+                    ),
                   ),
                 ],
               ),
@@ -84,38 +92,99 @@ class _QuickSetupScreenState extends State<QuickSetupScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(l10n.country, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: HealthColors.textSecondary)),
+                    Text(
+                      l10n.country,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: HealthColors.textSecondary,
+                      ),
+                    ),
                     const SizedBox(height: 8),
-                    Row(
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
                       children: [
                         HealthChip(
                           label: l10n.countryBrazil,
                           selected: _country == CountryCode.brazil,
+                          expanded: false,
                           onTap: () => _selectCountry(CountryCode.brazil),
                         ),
-                        const SizedBox(width: 8),
                         HealthChip(
                           label: l10n.countryPortugal,
                           selected: _country == CountryCode.portugal,
+                          expanded: false,
                           onTap: () => _selectCountry(CountryCode.portugal),
                         ),
                       ],
                     ),
                     const SizedBox(height: 20),
-                    Text(l10n.interfaceLanguage, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: HealthColors.textSecondary)),
+                    Text(
+                      l10n.primaryCurrency,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: HealthColors.textSecondary,
+                      ),
+                    ),
                     const SizedBox(height: 8),
-                    Row(
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        HealthChip(
+                          label: l10n.currencyBrl,
+                          selected: _currency == CurrencyCode.brl,
+                          expanded: false,
+                          onTap: () =>
+                              setState(() => _currency = CurrencyCode.brl),
+                        ),
+                        HealthChip(
+                          label: l10n.currencyEur,
+                          selected: _currency == CurrencyCode.eur,
+                          expanded: false,
+                          onTap: () =>
+                              setState(() => _currency = CurrencyCode.eur),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      l10n.countrySuggestion,
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        color: HealthColors.textMuted,
+                        height: 1.35,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      l10n.interfaceLanguage,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: HealthColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
                       children: [
                         HealthChip(
                           label: l10n.languagePtBr,
                           selected: _locale == InterfaceLocale.ptBr,
-                          onTap: () => setState(() => _locale = InterfaceLocale.ptBr),
+                          expanded: false,
+                          onTap: () =>
+                              setState(() => _locale = InterfaceLocale.ptBr),
                         ),
-                        const SizedBox(width: 8),
                         HealthChip(
                           label: l10n.languagePtPt,
                           selected: _locale == InterfaceLocale.ptPt,
-                          onTap: () => setState(() => _locale = InterfaceLocale.ptPt),
+                          expanded: false,
+                          onTap: () =>
+                              setState(() => _locale = InterfaceLocale.ptPt),
                         ),
                       ],
                     ),
@@ -130,12 +199,22 @@ class _QuickSetupScreenState extends State<QuickSetupScreen> {
                       ),
                       child: Text(
                         l10n.singleCurrencyNotice,
-                        style: const TextStyle(fontSize: 12, color: HealthColors.textMuted, height: 1.4),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: HealthColors.textMuted,
+                          height: 1.4,
+                        ),
                       ),
                     ),
                     if (_error != null) ...[
                       const SizedBox(height: 10),
-                      Text(_error!, style: const TextStyle(color: HealthColors.negative, fontSize: 12.5)),
+                      Text(
+                        _error!,
+                        style: const TextStyle(
+                          color: HealthColors.negative,
+                          fontSize: 12.5,
+                        ),
+                      ),
                     ],
                   ],
                 ),
@@ -145,7 +224,10 @@ class _QuickSetupScreenState extends State<QuickSetupScreen> {
               padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
               child: Column(
                 children: [
-                  ProgressDots(total: controller.onboardingTotalSteps, current: controller.onboardingTotalSteps),
+                  ProgressDots(
+                    total: controller.onboardingTotalSteps,
+                    current: controller.onboardingTotalSteps,
+                  ),
                   const SizedBox(height: 16),
                   HealthPrimaryButton(
                     label: l10n.quickSetupCta,

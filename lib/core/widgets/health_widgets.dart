@@ -69,22 +69,29 @@ class HealthChip extends StatelessWidget {
     required this.selected,
     required this.onTap,
     this.flex = 1,
+    this.expanded = true,
+    this.enabled = true,
   });
 
   final String label;
   final bool selected;
   final VoidCallback onTap;
   final int flex;
+  final bool expanded;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
     final accent = Theme.of(context).colorScheme.primary;
-    return Expanded(
-      flex: flex,
+    final chip = Opacity(
+      opacity: enabled ? 1 : .55,
       child: GestureDetector(
-        onTap: onTap,
+        onTap: enabled ? onTap : null,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+          padding: EdgeInsets.symmetric(
+            horizontal: expanded ? 4 : 14,
+            vertical: 12,
+          ),
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: selected ? accent : HealthColors.inputFill,
@@ -103,6 +110,7 @@ class HealthChip extends StatelessWidget {
         ),
       ),
     );
+    return expanded ? Expanded(flex: flex, child: chip) : chip;
   }
 }
 

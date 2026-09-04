@@ -4,9 +4,8 @@ import '../../../core/app/health_scope.dart';
 import '../../../core/theme/health_theme.dart';
 import '../../../l10n/app_localizations.dart';
 
-/// `subIsProfile`. Rows for regional settings/Mentor preferences/accounts
-/// are shown but inert (no destination screen), matching the prototype —
-/// only "Sair" is wired.
+/// `subIsProfile`. Regional settings persist in the Health profile while the
+/// account identity and Pet remain shared with the other Petrimonium apps.
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
@@ -31,14 +30,32 @@ class ProfileScreen extends StatelessWidget {
                     child: const SizedBox(
                       width: 32,
                       height: 32,
-                      child: Icon(Icons.arrow_back, size: 18, color: HealthColors.textPrimary),
+                      child: Icon(
+                        Icons.arrow_back,
+                        size: 18,
+                        color: HealthColors.textPrimary,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
-                  ClipOval(child: Image.asset('assets/pets/fox.png', width: 26, height: 26, fit: BoxFit.contain)),
+                  ClipOval(
+                    child: Image.asset(
+                      'assets/pets/fox.png',
+                      width: 26,
+                      height: 26,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(l10n.profileTitle, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: HealthColors.textPrimary)),
+                    child: Text(
+                      l10n.profileTitle,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: HealthColors.textPrimary,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -51,18 +68,35 @@ class ProfileScreen extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        ClipOval(child: Image.asset('assets/pets/fox.png', width: 48, height: 48, fit: BoxFit.contain)),
+                        ClipOval(
+                          child: Image.asset(
+                            'assets/pets/fox.png',
+                            width: 48,
+                            height: 48,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
                         const SizedBox(width: 14),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               if (name != null && name.isNotEmpty)
-                                Text(name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: HealthColors.textPrimary)),
+                                Text(
+                                  name,
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w800,
+                                    color: HealthColors.textPrimary,
+                                  ),
+                                ),
                               const SizedBox(height: 2),
                               Text(
                                 l10n.profileSharedAccountNote,
-                                style: const TextStyle(fontSize: 12, color: HealthColors.textSecondary),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: HealthColors.textSecondary,
+                                ),
                               ),
                             ],
                           ),
@@ -70,7 +104,10 @@ class ProfileScreen extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 24),
-                    _ProfileRow(label: l10n.profileRegionalSettings),
+                    _ProfileRow(
+                      label: l10n.profileRegionalSettings,
+                      onTap: controller.openRegionalPreferences,
+                    ),
                     const SizedBox(height: 12),
                     _ProfileRow(label: l10n.profileMentorPreferences),
                     const SizedBox(height: 12),
@@ -116,10 +153,18 @@ class _ProfileRow extends StatelessWidget {
             Expanded(
               child: Text(
                 label,
-                style: TextStyle(fontSize: 14, color: danger ? HealthColors.negative : HealthColors.textPrimary),
+                style: TextStyle(
+                  fontSize: 14,
+                  color: danger
+                      ? HealthColors.negative
+                      : HealthColors.textPrimary,
+                ),
               ),
             ),
-            const Text('›', style: TextStyle(color: HealthColors.textMuted, fontSize: 16)),
+            const Text(
+              '›',
+              style: TextStyle(color: HealthColors.textMuted, fontSize: 16),
+            ),
           ],
         ),
       ),

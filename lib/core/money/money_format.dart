@@ -8,6 +8,10 @@ abstract final class MoneyFormat {
     final formatter = NumberFormat.currency(
       locale: locale.toLanguageTag(),
       name: money.currency.code,
+      symbol: switch (money.currency) {
+        CurrencyCode.brl => 'R\$',
+        CurrencyCode.eur => '€',
+      },
       decimalDigits: 2,
     );
     return formatter.format(money.minorUnits / 100);
