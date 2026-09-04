@@ -1,6 +1,7 @@
 import '../../../core/money/money.dart';
 import '../../../core/profile/health_profile.dart';
 import '../domain/health_models.dart';
+import '../domain/mentor_models.dart';
 
 abstract interface class HealthRepository {
   Future<bool> hasSession();
@@ -8,9 +9,17 @@ abstract interface class HealthRepository {
   Future<void> register(String name, String email, String password);
   Future<void> logout();
 
+  /// `GET /api/users/me` — shared identity endpoint, used only for display.
+  Future<AccountIdentity?> getCurrentUser();
+
   Future<HealthProfile?> getProfile();
   Future<HealthProfile> saveProfile(HealthProfile profile);
   Future<PetIdentity?> getPet();
+
+  /// `POST /api/pets/configure` — shared with Academy/Wallet. Creates the
+  /// account's single Petrimonium Pet, or re-labels it if one already
+  /// exists. `specie` is a `PetSpecieEnum` value (e.g. `FOX`).
+  Future<void> configurePet({required String specie, required String name});
 
   Future<MonthlySummary> getSummary(DateTime month);
   Future<List<HealthAccount>> getAccounts();
@@ -59,6 +68,8 @@ abstract interface class HealthRepository {
     required DateTime startDate,
     DateTime? endDate,
   });
+  Future<List<HealthRecurrence>> getRecurrences();
+  Future<void> deleteRecurrence(int id);
 
   Future<List<HealthCard>> getCards();
   Future<HealthCard> createCard({
@@ -84,4 +95,13 @@ abstract interface class HealthRepository {
     required CurrencyCode currency,
     required DateTime paymentDate,
   });
+
+  /// `GET /api/mentor/suggestions` — shared Mentor endpoint. Suggested
+  /// conversation-starter prompts for the empty chat state.
+  Future<List<String>> getMentorSuggestions({String language = 'pt', int limit = 5});
+
+  /// `POST /api/mentor/chat` — shared Mentor endpoint. Free-form question;
+  /// `conversationId` continues an existing thread, or starts a new one when
+  /// null.
+  Future<MentorReply> sendMentorMessage({required String message, int? conversationId});
 }
