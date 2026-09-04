@@ -14,18 +14,35 @@ abstract interface class TokenStore {
 }
 
 final class SecureTokenStore implements TokenStore {
-  SecureTokenStore({FlutterSecureStorage? storage})
-      : _storage = storage ?? const FlutterSecureStorage();
+  SecureTokenStore({FlutterSecureStorage? storage, Duration? readTimeout})
+      : _storage = storage ?? const FlutterSecureStorage(),
+        _readTimeout = readTimeout ?? const Duration(seconds: 5);
 
   static const _accessKey = 'health_access_token';
   static const _refreshKey = 'health_refresh_token';
   final FlutterSecureStorage _storage;
+  final Duration _readTimeout;
+
+  /// Startup can't decide which screen to show until it knows whether a token
+  /// exists, so this read sits between the splash and everything else.
+  ///
+  /// It goes through the platform keyring, which does not always answer: a
+  /// locked GNOME keyring raises an unlock prompt and blocks until someone
+  /// answers it, and with no session to show that prompt in, the read simply
+  /// never completes. That is not an exception, so no `try`/`catch` upstream
+  /// can recover from it — the app just sits on the spinner forever.
+  ///
+  /// Time it out and report "no stored token" instead. The worst case is a
+  /// user with a valid session landing on the login screen, which they can
+  /// act on; the alternative is a splash screen they cannot leave.
+  Future<String?> _read(String key) =>
+      _storage.read(key: key).timeout(_readTimeout, onTimeout: () => null);
 
   @override
-  Future<String?> readAccessToken() => _storage.read(key: _accessKey);
+  Future<String?> readAccessToken() => _read(_accessKey);
 
   @override
-  Future<String?> readRefreshToken() => _storage.read(key: _refreshKey);
+  Future<String?> readRefreshToken() => _read(_refreshKey);
 
   @override
   Future<void> saveTokens(String accessToken, String refreshToken) async {
@@ -100,8 +117,13 @@ final class ApiClient {
       ..headers.addAll(headers);
     if (body != null) request.body = jsonEncode(body);
 
-    final streamed = await _http.send(request).timeout(_timeout);
-    final response = await http.Response.fromStream(streamed);
+    // The budget has to cover reading the body too, not just the response
+    // headers — a server that answers and then stalls mid-body would
+    // otherwise hang the caller indefinitely.
+    final response = await _http
+        .send(request)
+        .then(http.Response.fromStream)
+        .timeout(_timeout);
     if (authenticated && response.statusCode == 401 && !retrying) {
       final refreshed = await _refresh();
       if (refreshed) {
