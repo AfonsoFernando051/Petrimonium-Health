@@ -244,6 +244,15 @@ final class HealthController extends ChangeNotifier {
       for (final account in accounts) {
         _ensureCurrency(account.currency);
       }
+      for (final transaction in [...transactions, ...plannedTransactions]) {
+        _ensureCurrency(transaction.amount.currency);
+      }
+      for (final recurrence in recurrences) {
+        _ensureCurrency(recurrence.amount.currency);
+      }
+      for (final card in cards) {
+        _ensureCurrency(card.currency);
+      }
       error = null;
     } catch (exception) {
       error = exception.toString();
@@ -461,6 +470,12 @@ final class HealthController extends ChangeNotifier {
     await refreshData();
   }
 
+  Future<void> updateRecurrence(HealthRecurrence recurrence) async {
+    _ensureCurrency(recurrence.amount.currency);
+    await _withBusy(() => _repository.updateRecurrence(recurrence));
+    await refreshData();
+  }
+
   Future<void> confirmTransaction(int id) async {
     await _withBusy(() => _repository.confirmTransaction(id));
     await refreshData();
@@ -535,8 +550,13 @@ final class HealthController extends ChangeNotifier {
     await refreshData();
   }
 
-  Future<List<CardInvoice>> getInvoices(int cardId) =>
-      _repository.getInvoices(cardId);
+  Future<List<CardInvoice>> getInvoices(int cardId) async {
+    final invoices = await _repository.getInvoices(cardId);
+    for (final invoice in invoices) {
+      _ensureCurrency(invoice.currency);
+    }
+    return invoices;
+  }
 
   Future<void> payInvoice({
     required int invoiceId,
@@ -568,6 +588,18 @@ final class HealthController extends ChangeNotifier {
 
   void openRegionalPreferences() {
     subScreen = AppSubScreen.regionalPreferences;
+    notifyListeners();
+  }
+
+  void openAccounts() {
+    subScreen = AppSubScreen.root;
+    tab = AppTab.accounts;
+    notifyListeners();
+  }
+
+  void openMentor() {
+    subScreen = AppSubScreen.root;
+    tab = AppTab.mentor;
     notifyListeners();
   }
 

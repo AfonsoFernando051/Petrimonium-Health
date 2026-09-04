@@ -58,6 +58,39 @@ class HomeScreen extends StatelessWidget {
       );
     }
 
+    if (controller.accounts.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.account_balance_wallet_outlined,
+                size: 44,
+                color: HealthColors.textMuted,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                l10n.emptySummary,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: HealthColors.textSecondary,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 18),
+              FilledButton.icon(
+                onPressed: controller.openAccounts,
+                icon: const Icon(Icons.add),
+                label: Text(l10n.addAccount),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return RefreshIndicator(
       onRefresh: controller.refreshData,
       child: ListView(

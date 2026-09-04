@@ -109,9 +109,15 @@ class ProfileScreen extends StatelessWidget {
                       onTap: controller.openRegionalPreferences,
                     ),
                     const SizedBox(height: 12),
-                    _ProfileRow(label: l10n.profileMentorPreferences),
+                    _ProfileRow(
+                      label: l10n.profileMentorPreferences,
+                      onTap: controller.openMentor,
+                    ),
                     const SizedBox(height: 12),
-                    _ProfileRow(label: l10n.profileAccountsAndCards),
+                    _ProfileRow(
+                      label: l10n.profileAccountsAndCards,
+                      onTap: controller.openAccounts,
+                    ),
                     const SizedBox(height: 12),
                     _ProfileRow(
                       label: l10n.logout,

@@ -69,6 +69,7 @@ abstract interface class HealthRepository {
     DateTime? endDate,
   });
   Future<List<HealthRecurrence>> getRecurrences();
+  Future<HealthRecurrence> updateRecurrence(HealthRecurrence recurrence);
   Future<void> deleteRecurrence(int id);
 
   Future<List<HealthCard>> getCards();
@@ -98,10 +99,16 @@ abstract interface class HealthRepository {
 
   /// `GET /api/mentor/suggestions` — shared Mentor endpoint. Suggested
   /// conversation-starter prompts for the empty chat state.
-  Future<List<String>> getMentorSuggestions({String language = 'pt', int limit = 5});
+  Future<List<String>> getMentorSuggestions({
+    String language = 'pt',
+    int limit = 5,
+  });
 
   /// `POST /api/mentor/chat` — shared Mentor endpoint. Free-form question;
   /// `conversationId` continues an existing thread, or starts a new one when
   /// null.
-  Future<MentorReply> sendMentorMessage({required String message, int? conversationId});
+  Future<MentorReply> sendMentorMessage({
+    required String message,
+    int? conversationId,
+  });
 }
