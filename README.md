@@ -28,6 +28,12 @@ Cada perfil Health possui uma única moeda principal. O backend grava e valida o
 - Dados reais do Health não são lidos pela Academy nem misturados à carteira simulada.
 - Dados de investimentos da Wallet não são tratados como saldo de conta no Health.
 
+O contrato completo — o que atravessa a fronteira entre os três produtos, o
+que nunca atravessa e por quê — vive em um lugar só, no backend:
+[`Petrimonium-Backend/docs/INTEGRATION.md`](../Petrimonium-Backend/docs/INTEGRATION.md).
+O papel específico deste app, e as lacunas conhecidas dele, em
+[`docs/ECOSYSTEM.md`](docs/ECOSYSTEM.md).
+
 ## Pré-requisitos
 
 - Flutter compatível com o SDK Dart declarado em `pubspec.yaml`.
@@ -113,4 +119,3 @@ As divisões concretas podem evoluir, mas o código de apresentação não deve 
 - Sem conexão a bancos, Pix, Open Finance, MB Way ou provedores equivalentes.
 - Sem deduplicação por heurística de data e valor.
 - A moeda fica bloqueada depois que o perfil possui dados financeiros; ainda não existe migração de moeda.
-# Petrimonium-Health
