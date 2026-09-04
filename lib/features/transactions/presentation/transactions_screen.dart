@@ -270,7 +270,10 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
             amount: recurrence.amount,
             description: recurrence.description,
             category: recurrence.category,
-            date: recurrence.startDate,
+            // The date the dialog edits *is* the billing day — seeding it
+            // from `startDate` instead would show day 1 for rent that is
+            // charged on the 10th, and saving would then write that 1 back.
+            date: _billingDate(recurrence),
           ),
         ),
       );
@@ -284,7 +287,10 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
           description: draft.description,
           category: draft.category,
           dayOfMonth: draft.date.day,
-          startDate: draft.date,
+          // Editing a rent increase must not move when the series began —
+          // the backend rewrites planned occurrences from `startDate` on,
+          // and the ones already confirmed keep what they were paid at.
+          startDate: recurrence.startDate,
           endDate: recurrence.endDate,
         ),
       );
@@ -295,6 +301,19 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
         ).showSnackBar(SnackBar(content: Text(l10n.genericError)));
       }
     }
+  }
+
+  /// The recurrence's billing day, placed in the month it starts in. A day
+  /// the month is too short for (the 31st in a 30-day month) clamps to the
+  /// last day rather than rolling into the next one.
+  DateTime _billingDate(HealthRecurrence recurrence) {
+    final start = recurrence.startDate;
+    final lastDayOfMonth = DateTime(start.year, start.month + 1, 0).day;
+    return DateTime(
+      start.year,
+      start.month,
+      recurrence.dayOfMonth.clamp(1, lastDayOfMonth),
+    );
   }
 
   Future<bool> _confirmDelete(BuildContext context) async {
