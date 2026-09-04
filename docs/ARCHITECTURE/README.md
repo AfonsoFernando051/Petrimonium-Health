@@ -15,11 +15,20 @@ fronteira — em **`Petrimonium-Backend/docs/INTEGRATION.md`**.
 
 ## Fatias deste produto
 
-Nenhuma escrita ainda. Estão no índice como 26–29: perfil Health (país, moeda,
-idioma e a trava da moeda), contas/lançamentos/transferências, recorrências e
-cartões, resumo e projeção mensal. Enquanto isso, [`../API.md`](../API.md)
-descreve o contrato HTTP e [`../FINANCIAL_RULES.md`](../FINANCIAL_RULES.md) as
-regras monetárias.
+| # | Fatia | Status |
+|---|---|---|
+| 26 | Perfil Health: país, moeda, idioma e a trava da moeda | ✅ |
+| 27 | Contas, lançamentos e transferências | ⬜ |
+| 28 | Recorrências, cartões, compras e faturas | ⬜ |
+| 29 | Resumo e projeção mensal | ⬜ |
+
+A 26 é a que vale ler primeiro: o perfil não é uma tela de preferências, é
+pré-requisito de todo o resto — sem ele nenhuma outra rota do Health responde —
+e a moeda que ele grava é sustentada por chave estrangeira, não só por
+validação de serviço.
+
+Para as ainda não escritas, [`../API.md`](../API.md) descreve o contrato HTTP e
+[`../FINANCIAL_RULES.md`](../FINANCIAL_RULES.md) as regras monetárias.
 
 ## O que é específico deste repositório
 
