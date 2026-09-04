@@ -1,0 +1,36 @@
+name: Health CI
+
+# This repository *is* the Health app — its root holds pubspec.yaml — so every
+# path here is repo-root-relative. There is no "Petrimonium-Health/"
+# subdirectory to filter on or cd into.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Pinned rather than `channel: stable`, matching Wallet/Academy CI: a
+      # floating channel both drifts CI onto untested Flutter releases out
+      # from under this codebase and, combined with `cache: true`, risks
+      # pinning a *stale/broken* cached SDK to that same never-changing
+      # "stable" cache key with no way to bust it short of an SDK bump.
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.41.4"
+          cache: true
+          cache-key: "flutter-health-3.41.4-v1"
+
+      - run: flutter pub get
+      # app_localizations.dart is generated (l10n.yaml is checked in but its
+      # output is gitignored) — analyze/test both fail without this step.
+      - run: flutter gen-l10n
+      - run: flutter analyze
+      - run: flutter test
+
+  # No `integration-test` job: unlike Wallet/Academy, this repo has no
+  # integration_test/ directory or dev dependency yet.
