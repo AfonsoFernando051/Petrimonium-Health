@@ -14,8 +14,16 @@ final class RemoteHealthRepository implements HealthRepository {
   final ApiClient _api;
   static int _sequence = 0;
 
+  /// Every create in this repository carries one, so the backend can tell a
+  /// retried request apart from a second, deliberate one and never charge,
+  /// transfer or generate twice.
+  ///
+  /// The bound is a literal, not `1 << 32`: shifts are 32-bit on the web, so
+  /// that expression is `0` there and `nextInt(0)` throws `RangeError` --
+  /// which silently made every account, entry, transfer and card impossible to
+  /// create in a web build, while the same code worked on mobile.
   String _idempotencyKey() {
-    final random = Random.secure().nextInt(1 << 32).toRadixString(16);
+    final random = Random.secure().nextInt(0xFFFFFFFF).toRadixString(16);
     return 'health-${DateTime.now().microsecondsSinceEpoch}-${_sequence++}-$random';
   }
 

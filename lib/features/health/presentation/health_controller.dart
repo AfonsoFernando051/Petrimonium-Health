@@ -280,9 +280,14 @@ final class HealthController extends ChangeNotifier {
       )
       .toList(growable: false);
 
+  /// A one-off is a commitment the user entered by hand. An occurrence the
+  /// backend generated from a recurrence carries `recurrenceId`, and the
+  /// recurrence itself is already listed beside these: without this filter the
+  /// same rent appears twice, once as "monthly" and once as "one-time".
   List<HealthTransaction> get oneOffDebts => plannedTransactions
       .where(
         (t) =>
+            t.recurrenceId == null &&
             t.type == TransactionType.expense &&
             DebtCategory.fromApiCategory(t.category) != null,
       )
@@ -297,9 +302,11 @@ final class HealthController extends ChangeNotifier {
       )
       .toList(growable: false);
 
+  /// See [oneOffDebts]: a generated occurrence is not a separate income.
   List<HealthTransaction> get oneOffIncomes => plannedTransactions
       .where(
         (t) =>
+            t.recurrenceId == null &&
             t.type == TransactionType.income &&
             IncomeCategory.fromApiCategory(t.category) != null,
       )
